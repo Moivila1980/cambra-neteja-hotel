@@ -1,11 +1,12 @@
 /* ============================================================
    views/incidents.js — Registre i gestió d'incidències
    ============================================================ */
-import { h, clear, icon, iconEl, openSheet, toast, confirmSheet, pickImage, compressImage } from "../ui.js";
-import { t } from "../i18n.js";
+import { h, clear, icon, iconEl, openSheet, toast, confirmSheet, pickImage, compressImage, speechSupported, startDictation } from "../ui.js";
+import { t, speechLang } from "../i18n.js";
 import {
   state, INCIDENT_CATS, SEVERITIES, roomById, floorById,
   addIncident, updateIncident, deleteIncident, savePhoto, photoURL,
+  sessionStaff, staffById, initials,
 } from "../store.js";
 import { db } from "../db.js";
 
@@ -64,6 +65,7 @@ function openIncidentDetail(inc, view) {
       el.append(kv(t("inc.f_cat"), catLabel(inc.category)));
       el.append(kv(t("inc.f_sev"), sevLabel(inc.severity)));
       el.append(kv(t("inc.state"), inc.status === "open" ? t("inc.open") : t("inc.resolved")));
+      if (inc.staffId && staffById(inc.staffId)) el.append(kv(t("inc.reported_by"), staffById(inc.staffId).name));
       el.append(kv(t("inc.created"), new Date(inc.createdAt).toLocaleString()));
       if (inc.description) el.append(h("div", { class: "rsec" }, h("div", { class: "section-label" }, t("inc.f_desc")), h("p", { style: "font-size:14px;line-height:1.55" }, inc.description)));
       if (inc.photos?.length) {
@@ -86,12 +88,19 @@ function openIncidentDetail(inc, view) {
 function kv(k, v) { return h("div", { class: "kv" }, h("span", { class: "muted" }, k), h("b", {}, v)); }
 
 export function openIncidentForm({ roomId = null }) {
-  const data = { roomId, title: "", description: "", category: "manteniment", severity: "mitjana", photos: [] };
+  const me = sessionStaff();
+  const data = { roomId, title: "", description: "", category: "manteniment", severity: "mitjana", photos: [], staffId: me?.id || null };
   const room = roomId ? roomById(roomId) : null;
+  let voiceCtl = null;
   openSheet({
+    onClose: () => { if (voiceCtl) voiceCtl.stop(); },
     title: t("inc.new"),
     subtitle: room ? t("common.room", { n: room.number }) : t("inc.select_zone"),
     body: (el) => {
+      // qui ho reporta
+      if (me) el.append(h("div", { class: "reporter" },
+        h("span", { class: "reporter__av", style: `background:${me.color}` }, initials(me.name)),
+        h("div", {}, h("div", { style: "font-size:11px;color:var(--ink-faint);font-weight:700" }, t("inc.reported_by")), h("div", { style: "font-weight:700" }, me.name))));
       const title = h("input", { class: "input", placeholder: t("inc.title_ph") });
       el.append(field(t("inc.f_title"), title));
       if (!roomId) {
@@ -114,8 +123,32 @@ export function openIncidentForm({ roomId = null }) {
         data.severity = s.key; [...sev.children].forEach((b) => b.classList.remove("active")); sev.children[SEVERITIES.indexOf(s)].classList.add("active");
       } }, sevLabel(s.key))));
       el.append(h("div", { class: "field-row" }, field(t("inc.f_cat"), cat), field(t("inc.f_sev"), sev)));
-      const desc = h("textarea", { class: "textarea", placeholder: t("inc.desc_ph") });
-      el.append(field(t("inc.f_desc"), desc));
+
+      // descripció amb dictat per veu
+      const desc = h("textarea", { class: "textarea", placeholder: t("inc.desc_ph"), style: "min-height:96px" });
+      const descField = h("div", { class: "field" });
+      const labelRow = h("div", { style: "display:flex;align-items:center;justify-content:space-between;margin:0 2px 6px" },
+        h("label", { style: "font-size:12.5px;font-weight:700;color:var(--ink-soft)" }, t("inc.f_desc")));
+      let baseText = "";
+      const voiceBtn = h("button", { type: "button", class: "voice-btn",
+        onClick: () => {
+          if (!speechSupported()) { toast(t("voice.unsupported"), "warn"); return; }
+          if (voiceCtl) { voiceCtl.stop(); return; }
+          baseText = desc.value;
+          voiceBtn.classList.add("rec");
+          voiceBtn.innerHTML = ""; voiceBtn.append(h("span", { class: "voice-dot" }), h("span", {}, t("voice.listening")));
+          voiceCtl = startDictation({
+            lang: speechLang(),
+            onInterim: (txt) => { desc.value = (baseText ? baseText + " " : "") + txt; },
+            onFinal: (txt) => { baseText = (baseText ? baseText + " " : "") + txt.trim(); desc.value = baseText; },
+            onEnd: () => { voiceCtl = null; voiceBtn.classList.remove("rec"); voiceBtn.innerHTML = ""; voiceBtn.append(h("span", { html: icon("mic", 16, 2) }), h("span", {}, t("voice.start"))); },
+            onError: (err) => { voiceCtl = null; voiceBtn.classList.remove("rec"); toast(err === "not-allowed" ? t("voice.unsupported") : t("voice.unsupported"), "warn"); },
+          });
+        } },
+        h("span", { html: icon("mic", 16, 2) }), h("span", {}, t("voice.start")));
+      if (speechSupported()) labelRow.append(voiceBtn);
+      descField.append(labelRow, desc);
+      el.append(descField);
 
       const photoGrid = h("div", { class: "photo-grid" });
       const renderPhotos = () => {

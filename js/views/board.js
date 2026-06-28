@@ -6,17 +6,19 @@ import { t } from "../i18n.js";
 import {
   state, STATUSES, statusOf, dayProgress, roomState, roomsOfFloor,
   staffById, initials, fmtDate, todayISO, setDate, setFilterStaff, setFilterStatus,
+  sessionStaff,
 } from "../store.js";
 import { openRoom } from "./room.js";
 
 export function renderBoard(view) {
   clear(view);
+  const me = sessionStaff();
   if (state.rooms.length === 0) { view.append(emptyBoard()); return; }
   view.append(dateBar());
-  view.append(progressCard());
-  view.append(staffFilter());
-  view.append(statusFilter());
-  view.append(floorsGrid());
+  view.append(progressCard(me));
+  if (!me) view.append(staffFilter());
+  view.append(statusFilter(me));
+  view.append(floorsGrid(me));
 }
 
 /* ---------- Barra de data ---------- */
@@ -33,8 +35,8 @@ function dateBar() {
 }
 
 /* ---------- Targeta de progrés ---------- */
-function progressCard() {
-  const p = dayProgress();
+function progressCard(me) {
+  const p = dayProgress(state.date, me?.id || null);
   return h("div", { class: "progress-card" },
     h("h2", {}, `${t("board.cleaning")} · ${fmtDate(state.date)}`),
     h("div", { class: "progress-big" }, String(p.pct), h("small", {}, "%")),
@@ -65,9 +67,9 @@ function staffFilter() {
 }
 
 /* ---------- Filtre per estat ---------- */
-function statusFilter() {
+function statusFilter(me) {
   const wrap = h("div", { class: "chips", style: "margin-top:2px" });
-  const counts = dayProgress().counts;
+  const counts = dayProgress(state.date, me?.id || null).counts;
   const colorMap = { brut: "#C2603D", en_proces: "#B9821A", net: "#2F6F8F", revisat: "#3E7C4F", fora_servei: "#7E8884", no_molestar: "#7A5E97" };
   const mk = (key, label, color) => h("button", { class: "chip" + (state.filterStatus === key ? " active" : ""), onClick: () => setFilterStatus(key) },
     color ? h("span", { class: "dot", style: `background:${color}` }) : null, label);
@@ -77,12 +79,13 @@ function statusFilter() {
 }
 
 /* ---------- Graella per pisos ---------- */
-function floorsGrid() {
+function floorsGrid(me) {
   const frag = h("div");
   let anyVisible = false;
   state.floors.forEach((floor) => {
     let rooms = roomsOfFloor(floor.id).filter((r) => {
       const rs = roomState(r);
+      if (me && rs.staffId !== me.id) return false; // cambrera: només les seves
       if (state.filterStaff === "none" && rs.staffId) return false;
       if (state.filterStaff !== "all" && state.filterStaff !== "none" && rs.staffId !== state.filterStaff) return false;
       if (state.filterStatus !== "all" && rs.status !== state.filterStatus) return false;

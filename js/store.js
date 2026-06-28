@@ -56,6 +56,23 @@ export const state = {
 const listeners = new Set();
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function emit() { listeners.forEach((fn) => fn()); }
+
+/* ---------- Sessió / rol (local, per dispositiu) ---------- */
+const SESSION_KEY = "cambra.session";
+export function getSession() {
+  if (state.session !== undefined) return state.session;
+  try { state.session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); }
+  catch { state.session = null; }
+  return state.session;
+}
+export function setSession(s) {
+  state.session = s;
+  try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch {}
+  emit();
+}
+export function logout() { setSession(null); }
+export const isAdmin = () => getSession()?.role === "admin";
+export const sessionStaff = () => { const s = getSession(); return s?.role === "staff" && s.staffId ? staffById(s.staffId) : null; };
 /** Notifica un re-render manualment (després d'operacions silencioses). */
 export function notify() { emit(); }
 
@@ -122,11 +139,12 @@ export function openIncidents() {
   return state.incidents.filter((i) => i.status === "open");
 }
 
-/** Resum de progrés del dia. */
-export function dayProgress(date = state.date) {
+/** Resum de progrés del dia (opcionalment només d'una cambrera). */
+export function dayProgress(date = state.date, staffId = null) {
   const counts = { brut: 0, en_proces: 0, net: 0, revisat: 0, no_molestar: 0, fora_servei: 0 };
-  state.rooms.forEach((r) => { counts[roomState(r, date).status]++; });
-  const total = state.rooms.length;
+  const rooms = staffId ? state.rooms.filter((r) => roomState(r, date).staffId === staffId) : state.rooms;
+  rooms.forEach((r) => { counts[roomState(r, date).status]++; });
+  const total = rooms.length;
   const actius = total - counts.fora_servei - counts.no_molestar;
   const fets = counts.net + counts.revisat;
   const pct = actius > 0 ? Math.round((fets / actius) * 100) : 0;

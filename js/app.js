@@ -4,11 +4,15 @@
 import { $, h, icon } from "./ui.js";
 import { t } from "./i18n.js";
 import { applyAppearance } from "./theme.js";
-import { state, loadState, onChange, openIncidents, initials } from "./store.js";
+import { state, loadState, onChange, openIncidents, initials, getSession, isAdmin, sessionStaff, logout } from "./store.js";
 import { renderBoard } from "./views/board.js";
 import { renderIncidents } from "./views/incidents.js";
 import { renderReport } from "./views/report.js";
 import { renderSetup } from "./views/setup.js";
+import { renderLogin } from "./views/login.js";
+
+/* Rutes permeses segons rol (les cambreres no veuen Informe ni Configura). */
+const STAFF_ROUTES = ["board", "incidents"];
 
 const ROUTES = {
   board: renderBoard,
@@ -26,7 +30,27 @@ function currentRoute() {
 
 function render() {
   const view = $("#view");
+  const session = getSession();
+
+  // Sense sessió → pantalla de selecció d'usuari (amaga nav)
+  if (!session) {
+    document.body.classList.add("auth-gate");
+    $("#tabbar").hidden = true;
+    $("#appHeader").hidden = true;
+    renderLogin(view);
+    return;
+  }
+  // sessió de cambrera cap a una persona eliminada → torna a login
+  if (session.role === "staff" && !sessionStaff()) { logout(); return; }
+
+  document.body.classList.remove("auth-gate");
+  $("#appHeader").hidden = false;
+  $("#tabbar").hidden = false;
+
   current = currentRoute();
+  // restricció de rutes per a cambreres
+  if (!isAdmin() && !STAFF_ROUTES.includes(current)) { current = "board"; location.hash = "#board"; }
+
   ROUTES[current](view);
   injectFsBanner();
   syncNav();
@@ -40,10 +64,13 @@ function navigate(route) {
 }
 
 function syncNav() {
+  const admin = isAdmin();
   document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.route === current);
+    const route = tab.dataset.route;
+    tab.hidden = !(admin || STAFF_ROUTES.includes(route));
+    tab.classList.toggle("active", route === current);
     const label = tab.querySelector("span:not(.tab-badge)");
-    if (label) label.textContent = t("nav." + tab.dataset.route);
+    if (label) label.textContent = t("nav." + route);
   });
   // etiquetes accessibles dels botons de capçalera
   const fb = $("#fullscreenBtn"); if (fb) fb.setAttribute("aria-label", t("a11y.fullscreen"));
@@ -67,6 +94,16 @@ function refreshHeader() {
   const open = openIncidents().length;
   sub.textContent = current === "incidents" ? t("sub.incidents", { n: open }) : t("sub." + current);
   refreshFsLabels();
+  // botó d'usuari (rol actual + canviar)
+  const userBtn = $("#userBtn");
+  if (userBtn) {
+    const staff = sessionStaff();
+    userBtn.hidden = false;
+    $("#userName").textContent = staff ? staff.name : t("session.admin");
+    const av = $("#userAv");
+    av.textContent = staff ? initials(staff.name) : "★";
+    av.style.background = staff ? staff.color : "var(--teal)";
+  }
   // badge d'incidències
   const badge = $("#incBadge");
   if (open > 0) { badge.hidden = false; badge.textContent = String(open); }
@@ -150,18 +187,11 @@ async function boot() {
     t.addEventListener("click", () => navigate(t.dataset.route)));
   window.addEventListener("hashchange", render);
 
-  // re-render quan canvia l'estat (només la vista activa)
-  onChange(() => {
-    applyAppearance(state.config?.appearance);
-    ROUTES[current]($("#view"));
-    injectFsBanner();
-    syncNav();
-    refreshHeader();
-  });
+  // re-render quan canvia l'estat (passa pel guard de sessió/rol)
+  onChange(() => { applyAppearance(state.config?.appearance); render(); });
 
-  // mostra UI
-  $("#appHeader").hidden = false;
-  $("#tabbar").hidden = false;
+  // botó d'usuari → canviar d'usuari (torna a la selecció)
+  $("#userBtn")?.addEventListener("click", () => logout());
 
   maybeOnboard();
   render();

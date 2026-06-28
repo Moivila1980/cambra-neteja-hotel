@@ -1,7 +1,7 @@
 /* ============================================================
    sw.js — Service worker: precache de l'app shell + offline
    ============================================================ */
-const CACHE = "cambra-v18";
+const CACHE = "cambra-v20";
 
 const SHELL = [
   "./",
@@ -14,6 +14,7 @@ const SHELL = [
   "./js/ui.js",
   "./js/i18n.js",
   "./js/theme.js",
+  "./js/views/login.js",
   "./js/views/board.js",
   "./js/views/room.js",
   "./js/views/incidents.js",

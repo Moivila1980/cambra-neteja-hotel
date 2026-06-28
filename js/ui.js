@@ -48,6 +48,7 @@ const ICONS = {
   dnd: '<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
   wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8 6.2 21l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.7 2.7-2.3-2.3z"/>',
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>',
 };
 export function icon(name, size = 22, stroke = 2) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${ICONS[name] || ""}</svg>`;
@@ -186,6 +187,28 @@ export function compressImage(file, maxDim = 1280, quality = 0.72) {
     img.onerror = () => done(null);
     img.src = url;
   });
+}
+
+/* ---------- Dictat per veu (Web Speech API) ---------- */
+export function speechSupported() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+export function startDictation({ lang = "ca-ES", onInterim, onFinal, onEnd, onError }) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { onError && onError("unsupported"); return null; }
+  const rec = new SR();
+  rec.lang = lang; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = (e) => {
+    let interim = "", final = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += txt; else interim += txt;
+    }
+    if (final && onFinal) onFinal(final);
+    if (interim && onInterim) onInterim(interim);
+  };
+  rec.onerror = (e) => onError && onError(e.error || "error");
+  rec.onend = () => onEnd && onEnd();
+  try { rec.start(); } catch { onError && onError("start"); }
+  return { stop: () => { try { rec.stop(); } catch {} } };
 }
 
 export function fmtClock(ms) {

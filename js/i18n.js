@@ -26,6 +26,9 @@ export function t(key, vars) {
 /** Noms de dies i mesos per a la data formatada. */
 export function dateParts() { return DATE[_lang] || DATE.ca; }
 
+/** Codi BCP-47 per al reconeixement de veu segons l'idioma actual. */
+export function speechLang() { return ({ ca: "ca-ES", es: "es-ES", en: "en-US", de: "de-DE" })[_lang] || "ca-ES"; }
+
 const DATE = {
   ca: { days: ["diumenge","dilluns","dimarts","dimecres","dijous","divendres","dissabte"], months: ["gen","feb","març","abr","maig","juny","jul","ag","set","oct","nov","des"] },
   es: { days: ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"], months: ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"] },
@@ -40,6 +43,10 @@ const DICT = {
     "header.tagline": "Gestió de neteja", "sub.board": "Gestió de neteja", "sub.incidents": "{n} obertes", "sub.report": "Resum del dia", "sub.setup": "Estructura i dades",
     "a11y.install": "Instal·la l'app", "a11y.fullscreen": "Pantalla completa",
     "fs.prompt": "Veure l'app a pantalla completa de l'ordinador", "fs.activate": "Activa", "fs.exit": "Sortir", "fs.label": "Pantalla completa",
+    "login.who": "Qui ets?", "login.subtitle": "Tria com vols entrar a l'app.", "login.admin": "Administrador/a", "login.admin_desc": "Veure i gestionar-ho tot", "login.staff_title": "Cambreres", "login.no_staff": "Encara no hi ha cambreres. Entra com a administrador per crear-les.", "login.pin_label": "PIN d'administrador", "login.pin_wrong": "PIN incorrecte", "login.pin_optional": "Deixa-ho buit si no vols posar PIN.", "login.enter": "Entrar", "login.your_work": "Veuràs només les teves habitacions.",
+    "login.create_staff": "Crear cambreres", "sec.section": "Seguretat (accés admin)", "sec.pin_label": "PIN d'administrador (opcional)", "sec.pin_hint": "Protegeix l'accés d'administrador. Deixa-ho buit per no demanar PIN.", "sec.pin_saved": "PIN actualitzat", "sec.set": "Desar PIN",
+    "session.switch": "Canviar usuari", "session.logout": "Sortir", "session.admin": "Administrador/a",
+    "voice.start": "Dictar", "voice.listening": "Escoltant… parla", "voice.stop": "Atura", "voice.unsupported": "Aquest navegador no admet el dictat per veu (usa Chrome o Edge).", "inc.reported_by": "Reportat per", "inc.you": "Tu",
     "status.brut": "Brut", "status.en_proces": "En procés", "status.net": "Net", "status.revisat": "Revisat", "status.no_molestar": "No molestar", "status.fora_servei": "Fora de servei",
     "short.brut": "Brut", "short.en_proces": "En procés", "short.net": "Net", "short.revisat": "Revisat", "short.no_molestar": "No molest.", "short.fora_servei": "Fora serv.",
     "type.individual": "Individual", "type.doble": "Doble", "type.twin": "Twin", "type.suite": "Suite", "type.familiar": "Familiar", "type.altre": "Altre",
@@ -112,6 +119,10 @@ const DICT = {
     "header.tagline": "Gestión de limpieza", "sub.board": "Gestión de limpieza", "sub.incidents": "{n} abiertas", "sub.report": "Resumen del día", "sub.setup": "Estructura y datos",
     "a11y.install": "Instalar la app", "a11y.fullscreen": "Pantalla completa",
     "fs.prompt": "Ver la app a pantalla completa del ordenador", "fs.activate": "Activar", "fs.exit": "Salir", "fs.label": "Pantalla completa",
+    "login.who": "¿Quién eres?", "login.subtitle": "Elige cómo quieres entrar a la app.", "login.admin": "Administrador/a", "login.admin_desc": "Ver y gestionarlo todo", "login.staff_title": "Camareras", "login.no_staff": "Aún no hay camareras. Entra como administrador para crearlas.", "login.pin_label": "PIN de administrador", "login.pin_wrong": "PIN incorrecto", "login.pin_optional": "Déjalo vacío si no quieres poner PIN.", "login.enter": "Entrar", "login.your_work": "Verás solo tus habitaciones.",
+    "login.create_staff": "Crear camareras", "sec.section": "Seguridad (acceso admin)", "sec.pin_label": "PIN de administrador (opcional)", "sec.pin_hint": "Protege el acceso de administrador. Déjalo vacío para no pedir PIN.", "sec.pin_saved": "PIN actualizado", "sec.set": "Guardar PIN",
+    "session.switch": "Cambiar usuario", "session.logout": "Salir", "session.admin": "Administrador/a",
+    "voice.start": "Dictar", "voice.listening": "Escuchando… habla", "voice.stop": "Parar", "voice.unsupported": "Este navegador no admite el dictado por voz (usa Chrome o Edge).", "inc.reported_by": "Reportado por", "inc.you": "Tú",
     "status.brut": "Sucia", "status.en_proces": "En proceso", "status.net": "Limpia", "status.revisat": "Revisada", "status.no_molestar": "No molestar", "status.fora_servei": "Fuera de servicio",
     "short.brut": "Sucia", "short.en_proces": "En proceso", "short.net": "Limpia", "short.revisat": "Revisada", "short.no_molestar": "No molestar", "short.fora_servei": "F. servicio",
     "type.individual": "Individual", "type.doble": "Doble", "type.twin": "Twin", "type.suite": "Suite", "type.familiar": "Familiar", "type.altre": "Otro",
@@ -184,6 +195,10 @@ const DICT = {
     "header.tagline": "Housekeeping", "sub.board": "Housekeeping", "sub.incidents": "{n} open", "sub.report": "Daily summary", "sub.setup": "Structure & data",
     "a11y.install": "Install app", "a11y.fullscreen": "Full screen",
     "fs.prompt": "View the app in full screen", "fs.activate": "Activate", "fs.exit": "Exit", "fs.label": "Full screen",
+    "login.who": "Who are you?", "login.subtitle": "Choose how to enter the app.", "login.admin": "Administrator", "login.admin_desc": "View and manage everything", "login.staff_title": "Attendants", "login.no_staff": "No attendants yet. Sign in as administrator to create them.", "login.pin_label": "Administrator PIN", "login.pin_wrong": "Wrong PIN", "login.pin_optional": "Leave empty for no PIN.", "login.enter": "Enter", "login.your_work": "You'll only see your rooms.",
+    "login.create_staff": "Create attendants", "sec.section": "Security (admin access)", "sec.pin_label": "Administrator PIN (optional)", "sec.pin_hint": "Protects admin access. Leave empty to not ask for a PIN.", "sec.pin_saved": "PIN updated", "sec.set": "Save PIN",
+    "session.switch": "Switch user", "session.logout": "Sign out", "session.admin": "Administrator",
+    "voice.start": "Dictate", "voice.listening": "Listening… speak", "voice.stop": "Stop", "voice.unsupported": "This browser doesn't support voice dictation (use Chrome or Edge).", "inc.reported_by": "Reported by", "inc.you": "You",
     "status.brut": "Dirty", "status.en_proces": "In progress", "status.net": "Clean", "status.revisat": "Inspected", "status.no_molestar": "Do not disturb", "status.fora_servei": "Out of service",
     "short.brut": "Dirty", "short.en_proces": "In prog.", "short.net": "Clean", "short.revisat": "Inspected", "short.no_molestar": "DND", "short.fora_servei": "Out",
     "type.individual": "Single", "type.doble": "Double", "type.twin": "Twin", "type.suite": "Suite", "type.familiar": "Family", "type.altre": "Other",
@@ -256,6 +271,10 @@ const DICT = {
     "header.tagline": "Reinigung", "sub.board": "Reinigung", "sub.incidents": "{n} offen", "sub.report": "Tagesübersicht", "sub.setup": "Struktur & Daten",
     "a11y.install": "App installieren", "a11y.fullscreen": "Vollbild",
     "fs.prompt": "App im Vollbild des Computers anzeigen", "fs.activate": "Aktivieren", "fs.exit": "Beenden", "fs.label": "Vollbild",
+    "login.who": "Wer bist du?", "login.subtitle": "Wähle, wie du die App betreten möchtest.", "login.admin": "Administrator/in", "login.admin_desc": "Alles sehen und verwalten", "login.staff_title": "Reinigungskräfte", "login.no_staff": "Noch keine Reinigungskräfte. Melde dich als Administrator an, um sie zu erstellen.", "login.pin_label": "Administrator-PIN", "login.pin_wrong": "Falsche PIN", "login.pin_optional": "Leer lassen für keine PIN.", "login.enter": "Eintreten", "login.your_work": "Du siehst nur deine Zimmer.",
+    "login.create_staff": "Reinigungskräfte erstellen", "sec.section": "Sicherheit (Admin-Zugang)", "sec.pin_label": "Administrator-PIN (optional)", "sec.pin_hint": "Schützt den Admin-Zugang. Leer lassen, um keine PIN zu verlangen.", "sec.pin_saved": "PIN aktualisiert", "sec.set": "PIN speichern",
+    "session.switch": "Benutzer wechseln", "session.logout": "Abmelden", "session.admin": "Administrator/in",
+    "voice.start": "Diktieren", "voice.listening": "Hört zu… sprich", "voice.stop": "Stopp", "voice.unsupported": "Dieser Browser unterstützt keine Spracheingabe (nutze Chrome oder Edge).", "inc.reported_by": "Gemeldet von", "inc.you": "Du",
     "status.brut": "Schmutzig", "status.en_proces": "In Arbeit", "status.net": "Sauber", "status.revisat": "Geprüft", "status.no_molestar": "Bitte nicht stören", "status.fora_servei": "Außer Betrieb",
     "short.brut": "Schmutzig", "short.en_proces": "In Arbeit", "short.net": "Sauber", "short.revisat": "Geprüft", "short.no_molestar": "BNS", "short.fora_servei": "Außer B.",
     "type.individual": "Einzel", "type.doble": "Doppel", "type.twin": "Twin", "type.suite": "Suite", "type.familiar": "Familie", "type.altre": "Andere",

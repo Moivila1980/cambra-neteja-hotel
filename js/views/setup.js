@@ -23,6 +23,7 @@ const appr = () => ({ ...DEFAULT_APPEARANCE, ...(state.config.appearance || {}) 
 let activeSection = "estructura";
 
 export function renderSetup(view) {
+  if (window.__setupTab) { activeSection = window.__setupTab; window.__setupTab = null; }
   clear(view);
   view.append(h("h1", { class: "view-title" }, t("setup.title")));
   view.append(h("p", { class: "view-sub" }, t("setup.subtitle")));
@@ -282,6 +283,16 @@ function personalSection(view) {
     frag.append(h("p", { class: "muted", style: "font-size:13px;margin:0 4px 10px" }, t("staff.quick_hint")));
     frag.append(quickAssign(view));
   }
+
+  // PIN d'administrador (opcional)
+  const pinInput = h("input", { class: "input", type: "password", inputmode: "numeric", autocomplete: "off", value: state.config.adminPin || "", placeholder: "••••" });
+  const pinCard = h("div", { class: "card card-pad", style: "margin-top:18px" },
+    h("div", { class: "section-label", style: "margin-top:0" }, t("sec.section")),
+    h("div", { class: "field" }, h("label", {}, t("sec.pin_label")), pinInput),
+    h("p", { class: "muted", style: "font-size:12px;margin:0 0 12px" }, t("sec.pin_hint")),
+    h("button", { class: "btn btn--primary btn--block", onClick: async () => { await saveConfig({ adminPin: pinInput.value.trim() || null }); toast(t("sec.pin_saved")); } }, t("sec.set")));
+  frag.append(pinCard);
+
   return frag;
 }
 
