@@ -10,7 +10,7 @@ import {
   roomsOfFloor, floorById, roomById, staffById, roomState, initials,
   addFloor, updateFloor, deleteFloor,
   addRoom, addRoomsBulk, updateRoom, deleteRoom,
-  addStaff, updateStaff, deleteStaff,
+  addStaff, updateStaff, deleteStaff, approveStaff, setStaffPassword, pendingStaff,
   assignRoom, assignRoomSilent, notify, saveConfig, saveConfigSilent, saveChecklistTemplate, setLanguage,
   saveAppearance, resetAppearance, checklistTemplate,
   saveStructureTemplate, applyStructureTemplate, deleteStructureTemplate,
@@ -263,6 +263,18 @@ function typePicker(current, onChange) {
 /* ============================================================ PERSONAL ============================================================ */
 function personalSection(view) {
   const frag = h("div");
+  const pend = pendingStaff();
+  if (pend.length) {
+    const pc = h("div", { class: "card card-pad", style: "margin-top:6px;border-color:var(--amber);border-width:1.5px" });
+    pc.append(h("div", { class: "section-label", style: "margin-top:0" }, t("staff.pending_section")));
+    pend.forEach((s) => pc.append(h("div", { class: "row", style: "background:var(--amber-soft)" },
+      h("div", { class: "row__avatar", style: `background:${s.color}` }, initials(s.name)),
+      h("div", { class: "row__body" }, h("div", { class: "row__title" }, s.name), h("div", { class: "row__meta" }, t("staff.pending_badge"))),
+      h("button", { class: "btn btn--sm btn--primary", style: "flex:0 0 auto", onClick: async () => { await approveStaff(s.id); renderSetup(view); toast(t("staff.approved")); } }, iconEl("check", 16), t("staff.approve")),
+      h("button", { class: "icon-sm", style: "color:var(--terra);flex:0 0 auto", onClick: async () => { if (await confirmSheet(t("staff.delete"), t("staff.delete_msg", { name: s.name }), { okLabel: t("common.delete") })) { await deleteStaff(s.id); renderSetup(view); toast(t("staff.deleted")); } }, html: icon("trash", 17, 2) })
+    )));
+    frag.append(pc);
+  }
   frag.append(h("div", { class: "section-label", style: "margin-top:6px" }, t("staff.section")));
   if (state.staff.length === 0) frag.append(h("div", { class: "empty", style: "padding:30px 20px" },
     h("div", { html: icon("user", 46, 1.4) }), h("h3", {}, t("staff.none")), h("p", {}, t("staff.none_desc"))));
@@ -276,7 +288,7 @@ function personalSection(view) {
       h("div", { class: "row__action", html: icon("chevron", 20) })));
   });
   frag.append(list);
-  frag.append(h("button", { class: "add-tile", style: "margin-top:12px", onClick: async () => { const name = await promptSheet(t("staff.new"), { label: t("staff.name"), placeholder: t("staff.name_ph") }); if (!name) return; await addStaff(name); renderSetup(view); } }, iconEl("plus", 18), t("staff.add")));
+  frag.append(h("button", { class: "add-tile", style: "margin-top:12px", onClick: () => openStaffCreate(view) }, iconEl("plus", 18), t("staff.add")));
 
   if (state.staff.length && state.rooms.length) {
     frag.append(h("div", { class: "section-label" }, t("staff.quick_assign")));
@@ -296,6 +308,29 @@ function personalSection(view) {
   return frag;
 }
 
+function openStaffCreate(view) {
+  openSheet({
+    title: t("staff.new"), size: "dialog",
+    body: (el) => {
+      const name = h("input", { class: "input", placeholder: t("staff.name_ph"), autocomplete: "off" });
+      const pw = h("input", { class: "input", type: "text", placeholder: "••••", autocomplete: "off" });
+      el.append(h("div", { class: "field" }, h("label", {}, t("staff.name")), name));
+      el.append(h("div", { class: "field" }, h("label", {}, t("staff.set_password")), pw));
+      setTimeout(() => name.focus(), 140);
+      el.__get = () => ({ name: name.value.trim(), password: pw.value });
+    },
+    footer: (f, close) => f.append(
+      h("button", { class: "btn", onClick: () => close() }, t("common.cancel")),
+      h("button", { class: "btn btn--primary btn--block", onClick: async (e) => {
+        const d = e.target.closest(".sheet").querySelector(".sheet__body").__get();
+        if (!d.name) { toast(t("auth.need_name"), "warn"); return; }
+        await addStaff(d.name, null, { password: d.password, pending: false });
+        close(); renderSetup(view); toast(t("staff.approved"));
+      } }, iconEl("check", 18), t("re.add"))
+    ),
+  });
+}
+
 function openStaffEditor(s, view) {
   let color = s.color;
   openSheet({
@@ -307,7 +342,9 @@ function openStaffEditor(s, view) {
       const renderSw = () => { clear(swWrap); swWrap.append(colorRow(STAFF_COLORS, color, color, (c) => { color = c; renderSw(); })); };
       renderSw();
       el.append(h("div", { class: "field" }, h("label", {}, t("staff.color")), swWrap));
-      el.__get = () => ({ name: name.value.trim() || s.name, color });
+      const pw = h("input", { class: "input", type: "text", value: s.password || "", placeholder: "••••", autocomplete: "off" });
+      el.append(h("div", { class: "field" }, h("label", {}, t("staff.set_password")), pw));
+      el.__get = () => ({ name: name.value.trim() || s.name, color, password: pw.value });
     },
     footer: (f, close) => f.append(
       iconBtnLg("trash", "var(--terra)", async () => { if (await confirmSheet(t("staff.delete"), t("staff.delete_msg", { name: s.name }), { okLabel: t("common.delete") })) { await deleteStaff(s.id); close(); renderSetup(view); toast(t("staff.deleted")); } }),

@@ -295,15 +295,27 @@ export async function deleteRoom(id) {
 }
 
 /* ---------- Accions: personal ---------- */
-export async function addStaff(name, color) {
+export async function addStaff(name, color, { password = "", pending = false } = {}) {
   const used = state.staff.map((s) => s.color);
   const c = color || STAFF_COLORS.find((x) => !used.includes(x)) || STAFF_COLORS[state.staff.length % STAFF_COLORS.length];
-  const s = { id: uid("s_"), name: name.trim(), color: c };
+  const s = { id: uid("s_"), name: name.trim(), color: c, password: password || "", pending: !!pending };
   state.staff.push(s);
   await db.put("staff", s);
   emit();
   return s;
 }
+export const staffByName = (name) => state.staff.find((s) => s.name.trim().toLowerCase() === (name || "").trim().toLowerCase()) || null;
+/** Auto-registre d'una cambrera: queda pendent fins que l'admin l'accepti. */
+export async function registerStaff(name, password) {
+  const nm = (name || "").trim();
+  if (!nm) return { error: "name" };
+  if (staffByName(nm)) return { error: "exists" };
+  const s = await addStaff(nm, null, { password: password || "", pending: true });
+  return { staff: s };
+}
+export async function approveStaff(id) { await updateStaff(id, { pending: false }); }
+export async function setStaffPassword(id, password) { await updateStaff(id, { password: password || "" }); }
+export const pendingStaff = () => state.staff.filter((s) => s.pending);
 export async function updateStaff(id, patch) {
   const s = staffById(id); if (!s) return;
   Object.assign(s, patch);
