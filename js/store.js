@@ -138,6 +138,12 @@ export async function saveConfig(patch) {
   await db.put("meta", state.config);
   emit();
 }
+/** Desa la configuració sense emetre re-render (per a camps de text en edició,
+ *  perquè l'input no es recreï i no perdi el focus). */
+export async function saveConfigSilent(patch) {
+  state.config = { ...state.config, ...patch, key: "config" };
+  await db.put("meta", state.config);
+}
 export async function setLanguage(code) {
   setLangCode(code);
   state.config = { ...state.config, lang: code, key: "config" };

@@ -149,7 +149,7 @@ export function promptSheet(title, { label = "Nom", value = "", placeholder = ""
 }
 
 /* ---------- Captura de foto (càmera o galeria) ---------- */
-export function pickImage({ capture = true } = {}) {
+export function pickImage({ capture = false } = {}) {
   return new Promise((resolve) => {
     const input = h("input", { type: "file", accept: "image/*" });
     if (capture) input.setAttribute("capture", "environment");
@@ -164,22 +164,26 @@ export function pickImage({ capture = true } = {}) {
   });
 }
 
-/** Redimensiona/comprimeix una imatge a un blob JPEG raonable. */
+/** Redimensiona/comprimeix una imatge a un blob JPEG. Retorna null si la
+ *  imatge no es pot llegir (p. ex. formats com HEIC que el navegador no obre). */
 export function compressImage(file, maxDim = 1280, quality = 0.72) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+    const done = (v) => { try { URL.revokeObjectURL(url); } catch {} resolve(v); };
     img.onload = () => {
-      let { width, height } = img;
-      const scale = Math.min(1, maxDim / Math.max(width, height));
-      width = Math.round(width * scale); height = Math.round(height * scale);
-      const canvas = h("canvas");
-      canvas.width = width; canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((blob) => resolve(blob || file), "image/jpeg", quality);
+      try {
+        let { width, height } = img;
+        if (!width || !height) return done(null);
+        const scale = Math.min(1, maxDim / Math.max(width, height));
+        width = Math.round(width * scale); height = Math.round(height * scale);
+        const canvas = h("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => done(blob || null), "image/jpeg", quality);
+      } catch { done(null); }
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => done(null);
     img.src = url;
   });
 }

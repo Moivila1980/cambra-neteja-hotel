@@ -126,10 +126,13 @@ export function openIncidentForm({ roomId = null }) {
           photoURL(pid).then((u) => u && t2.prepend(h("img", { src: u })));
           photoGrid.append(t2);
         });
-        photoGrid.append(h("button", { class: "photo-add", onClick: async () => {
-          const file = await pickImage({ capture: true }); if (!file) return;
-          const blob = await compressImage(file); const id = await savePhoto(blob);
-          data.photos.push(id); renderPhotos();
+        photoGrid.append(h("button", { class: "photo-add", type: "button", onClick: async () => {
+          try {
+            const file = await pickImage(); if (!file) return;
+            const blob = await compressImage(file); if (!blob) { toast(t("photo.error"), "err"); return; }
+            const id = await savePhoto(blob);
+            data.photos.push(id); renderPhotos();
+          } catch (e) { toast(t("photo.error"), "err"); }
         } }, h("span", { html: icon("camera", 24, 1.8) }), t("common.add")));
       };
       renderPhotos();

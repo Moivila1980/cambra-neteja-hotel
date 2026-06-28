@@ -11,7 +11,7 @@ import {
   addFloor, updateFloor, deleteFloor,
   addRoom, addRoomsBulk, updateRoom, deleteRoom,
   addStaff, updateStaff, deleteStaff,
-  assignRoom, assignRoomSilent, notify, saveConfig, saveChecklistTemplate, setLanguage,
+  assignRoom, assignRoomSilent, notify, saveConfig, saveConfigSilent, saveChecklistTemplate, setLanguage,
   saveAppearance, resetAppearance, checklistTemplate,
   saveStructureTemplate, applyStructureTemplate, deleteStructureTemplate,
   exportData, importData, seedDemo,
@@ -55,20 +55,28 @@ function fileToDataURL(blob) { return new Promise((res) => { const fr = new File
 
 function brandCard(view) {
   const card = h("div", { class: "card card-pad brand-card", style: "margin-top:8px" });
-  const logoBox = h("button", { class: "brand-logo" + (state.config.logo ? " has-img" : ""), "aria-label": "logo",
+  const logoBox = h("button", { class: "brand-logo" + (state.config.logo ? " has-img" : ""), "aria-label": "logo", type: "button",
     onClick: async () => {
-      const file = await pickImage({ capture: false }); if (!file) return;
-      const blob = await compressImage(file, 320, 0.85);
-      const dataURL = await fileToDataURL(blob);
-      await saveConfig({ logo: dataURL }); window.__refreshHeader?.(); renderSetup(view); toast(t("brand.logo_updated"));
+      try {
+        const file = await pickImage({ capture: false }); if (!file) return;
+        toast(t("brand.logo_processing"));
+        const blob = await compressImage(file, 320, 0.85);
+        if (!blob) { toast(t("brand.logo_error"), "err"); return; }
+        const dataURL = await fileToDataURL(blob);
+        await saveConfig({ logo: dataURL }); window.__refreshHeader?.(); renderSetup(view); toast(t("brand.logo_updated"));
+      } catch (e) { toast(t("brand.logo_error"), "err"); }
     } });
   if (state.config.logo) logoBox.append(h("img", { src: state.config.logo, alt: "Logo" }));
   else logoBox.innerHTML = icon("camera", 24, 1.8);
   logoBox.append(h("span", { class: "brand-logo__edit", html: icon(state.config.logo ? "edit" : "plus", 13, 2.5) }));
 
-  const input = h("input", { class: "input", value: state.config.hotelName, placeholder: t("brand.hotel_name") });
+  const input = h("input", { class: "input", value: state.config.hotelName, placeholder: t("brand.hotel_name"), autocomplete: "off" });
   let to;
-  input.addEventListener("input", () => { clearTimeout(to); to = setTimeout(() => { saveConfig({ hotelName: input.value.trim() || "—" }); window.__refreshHeader?.(); }, 400); });
+  input.addEventListener("input", () => {
+    clearTimeout(to);
+    // desa SENSE re-render perquè l'input no perdi el focus mentre escrius
+    to = setTimeout(async () => { await saveConfigSilent({ hotelName: input.value.trim() || "—" }); window.__refreshHeader?.(); }, 350);
+  });
 
   const right = h("div", { style: "flex:1;min-width:0" },
     h("label", { style: "display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:0 2px 6px" }, t("brand.hotel_name")),
@@ -191,15 +199,18 @@ function openBulkRooms(floor, view) {
   openSheet({
     title: t("bulk.title"), subtitle: floor.name,
     body: (el) => {
-      const count = h("input", { class: "input", type: "number", value: "10", min: "1", max: "200" });
-      const start = h("input", { class: "input", type: "number", value: "101" });
+      const count = h("input", { class: "input input--num", type: "number", value: "10", min: "1", max: "500", inputmode: "numeric" });
+      const start = h("input", { class: "input", type: "number", value: "101", inputmode: "numeric" });
       const prefix = h("input", { class: "input", placeholder: t("bulk.prefix_ph") });
       let type = "doble";
-      const presets = h("div", { class: "chips", style: "margin-bottom:6px" });
-      [5, 10, 15, 20, 30, 50].forEach((n) => presets.append(h("button", { class: "chip", onClick: () => { count.value = String(n); [...presets.children].forEach((c) => c.classList.toggle("active", c.textContent === String(n))); } }, String(n))));
-      [...presets.children].forEach((c) => c.classList.toggle("active", c.textContent === "10"));
-      el.append(h("div", { class: "field" }, h("label", {}, t("bulk.how_many")), presets));
-      el.append(h("div", { class: "field-row" }, h("div", { class: "field" }, h("label", {}, t("bulk.exact")), count), h("div", { class: "field" }, h("label", {}, t("bulk.start")), start)));
+      const presets = h("div", { class: "chips", style: "margin-top:8px" });
+      const syncPresets = () => [...presets.children].forEach((c) => c.classList.toggle("active", c.textContent === String(count.value).trim()));
+      [5, 10, 15, 20, 30, 50, 100].forEach((n) => presets.append(h("button", { type: "button", class: "chip", onClick: () => { count.value = String(n); syncPresets(); } }, String(n))));
+      count.addEventListener("input", syncPresets);
+      syncPresets();
+      // camp editable PROMINENT + dreceres ràpides
+      el.append(h("div", { class: "field" }, h("label", {}, t("bulk.how_many")), count, presets));
+      el.append(h("div", { class: "field" }, h("label", {}, t("bulk.start")), start));
       el.append(h("div", { class: "field" }, h("label", {}, t("bulk.prefix")), prefix));
       el.append(h("div", { class: "field" }, h("label", {}, t("bulk.type")), typePicker(type, (x) => type = x)));
       el.append(h("div", { class: "note-box" }, t("bulk.note")));

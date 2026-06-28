@@ -123,10 +123,13 @@ function photosSection(room, task, rerender, el) {
     photoURL(pid).then((url) => { if (url) thumb.prepend(h("img", { src: url, loading: "lazy", onClick: () => openPhoto(url) })); });
     grid.append(thumb);
   });
-  grid.append(h("button", { class: "photo-add", onClick: async () => {
-    const file = await pickImage({ capture: true }); if (!file) return;
-    const blob = await compressImage(file); const id = await savePhoto(blob);
-    await addTaskPhoto(room.id, id); rerender(el); toast(t("room.photo_added"));
+  grid.append(h("button", { class: "photo-add", type: "button", onClick: async () => {
+    try {
+      const file = await pickImage(); if (!file) return;
+      const blob = await compressImage(file); if (!blob) { toast(t("photo.error"), "err"); return; }
+      const id = await savePhoto(blob);
+      await addTaskPhoto(room.id, id); rerender(el); toast(t("room.photo_added"));
+    } catch (e) { toast(t("photo.error"), "err"); }
   } }, h("span", { html: icon("camera", 24, 1.8) }), t("common.add")));
   sec.append(grid);
   return sec;
