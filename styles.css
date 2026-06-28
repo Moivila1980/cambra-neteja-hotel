@@ -468,6 +468,7 @@ h1,h2,h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.12
 
 /* ---------- Finalització d'habitació ---------- */
 .finish-btn { box-shadow: 0 6px 20px rgba(14,82,73,.32); }
+.finish-btn.is-blocked { opacity: .5; box-shadow: none; }
 .finish-done { display: flex; align-items: center; gap: 13px; padding: 16px; border-radius: 16px; background: var(--green-soft); color: #2a5637; border: 1px solid color-mix(in srgb, var(--green) 25%, var(--line)); }
 .finish-done__check { width: 40px; height: 40px; border-radius: 12px; background: var(--green); color: #fff; display: grid; place-items: center; flex: 0 0 auto; }
 

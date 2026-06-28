@@ -85,6 +85,7 @@ export async function loadState() {
   config.lang = config.lang || "ca";
   config.appearance = config.appearance || {};
   config.structureTemplates = config.structureTemplates || [];
+  config.checklistRequired = config.checklistRequired || { daily: false, checkout: false };
   setLangCode(config.lang);
   state.config = config;
   state.floors = sortByOrder(await db.getAll("floors"));
@@ -157,6 +158,14 @@ export async function saveAppearance(patch) {
 }
 export async function resetAppearance() {
   state.config = { ...state.config, appearance: {}, key: "config" };
+  await db.put("meta", state.config);
+  emit();
+}
+/** La checklist d'aquest tipus és obligatòria per finalitzar? */
+export function isChecklistRequired(type) { return !!state.config?.checklistRequired?.[type]; }
+export async function setChecklistRequired(type, required) {
+  const cr = { ...(state.config.checklistRequired || {}), [type]: !!required };
+  state.config = { ...state.config, checklistRequired: cr, key: "config" };
   await db.put("meta", state.config);
   emit();
 }

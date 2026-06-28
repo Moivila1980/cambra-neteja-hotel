@@ -7,7 +7,7 @@ import {
   state, STATUSES, CLEAN_TYPES,
   roomById, floorById, roomState, getTask,
   setRoomStatus, assignRoom, setRoomType, ensureChecklist, toggleCheck,
-  setTaskNotes, finishTask, inspectRoom, beginIfNeeded,
+  setTaskNotes, finishTask, inspectRoom, beginIfNeeded, isChecklistRequired,
   savePhoto, photoURL, addTaskPhoto, removeTaskPhoto, fmtDate,
 } from "../store.js";
 import { openIncidentForm } from "./incidents.js";
@@ -167,8 +167,16 @@ function actionRow(room, rs, rerender, el) {
     wrap.append(h("button", { class: "btn btn--ghost btn--block", style: "margin-top:6px",
       onClick: async () => { await setRoomStatus(room.id, "en_proces"); rerender(el); toast(t("room.toast_reopened")); } }, t("room.reopen")));
   } else {
-    wrap.append(h("button", { class: "btn btn--primary btn--block btn--lg finish-btn",
-      onClick: async () => { await finishTask(room.id); rerender(el); toast(t("room.toast_finished")); } }, iconEl("check", 20), t("room.finish")));
+    const task = getTask(room.id) || {};
+    const items = task.checklist || [];
+    const doneCount = items.filter((i) => i.done).length;
+    const blocked = isChecklistRequired(rs.type) && items.length > 0 && doneCount < items.length;
+    wrap.append(h("button", { class: "btn btn--primary btn--block btn--lg finish-btn" + (blocked ? " is-blocked" : ""),
+      onClick: async () => {
+        if (blocked) { toast(t("room.checklist_incomplete", { a: doneCount, b: items.length }), "warn"); return; }
+        await finishTask(room.id); rerender(el); toast(t("room.toast_finished"));
+      } }, iconEl("check", 20), t("room.finish")));
+    if (blocked) wrap.append(h("p", { style: "text-align:center;font-size:12px;margin-top:8px;color:var(--amber);font-weight:700" }, t("room.checklist_incomplete", { a: doneCount, b: items.length })));
   }
   return wrap;
 }

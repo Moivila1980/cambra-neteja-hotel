@@ -14,6 +14,7 @@ import {
   assignRoom, assignRoomSilent, notify, saveConfig, saveConfigSilent, saveChecklistTemplate, setLanguage,
   saveAppearance, resetAppearance, checklistTemplate,
   saveStructureTemplate, applyStructureTemplate, deleteStructureTemplate,
+  isChecklistRequired, setChecklistRequired,
   exportData, importData, seedDemo,
 } from "../store.js";
 
@@ -89,11 +90,36 @@ function brandCard(view) {
 }
 
 /* ============================================================ ESTRUCTURA ============================================================ */
-async function promptNewFloor(view) {
-  const name = await promptSheet(t("struct.new_floor"), { label: t("struct.floor_name"), placeholder: t("struct.floor_default", { n: state.floors.length + 1 }), value: t("struct.floor_default", { n: state.floors.length + 1 }) });
-  if (name === null) return;
-  await addFloor(name);
-  renderSetup(view);
+function promptNewFloor(view) {
+  const n = state.floors.length + 1;
+  const suggestions = [
+    t("struct.floor_default", { n }),
+    t("zone.wing_a"), t("zone.wing_b"),
+    t("zone.right"), t("zone.left"),
+    `${t("zone.wing_a")} · ${t("struct.floor_default", { n })}`,
+    `${t("zone.wing_b")} · ${t("struct.floor_default", { n })}`,
+  ];
+  openSheet({
+    title: t("struct.new_floor"), size: "dialog",
+    body: (el) => {
+      const input = h("input", { class: "input", value: t("struct.floor_default", { n }), placeholder: t("struct.floor_name"), autocomplete: "off" });
+      el.append(h("div", { class: "field" }, h("label", {}, t("struct.floor_name")), input));
+      el.append(h("p", { class: "muted", style: "font-size:12px;margin:0 2px 8px" }, t("zone.hint")));
+      el.append(h("div", { class: "section-label", style: "margin:6px 2px 8px" }, t("zone.quick")));
+      const chips = h("div", { class: "chips", style: "flex-wrap:wrap;overflow:visible" });
+      suggestions.forEach((s) => chips.append(h("button", { type: "button", class: "chip", onClick: () => { input.value = s; input.focus(); } }, s)));
+      el.append(chips);
+      setTimeout(() => { input.focus(); input.select?.(); }, 140);
+      el.__get = () => input.value.trim();
+    },
+    footer: (f, close) => f.append(
+      h("button", { class: "btn", onClick: () => close() }, t("common.cancel")),
+      h("button", { class: "btn btn--primary btn--block", onClick: async (e) => {
+        const name = e.target.closest(".sheet").querySelector(".sheet__body").__get();
+        await addFloor(name || t("struct.floor_default", { n })); close(); renderSetup(view);
+      } }, iconEl("check", 18), t("re.add"))
+    ),
+  });
 }
 
 function structureSection(view) {
@@ -392,6 +418,17 @@ function templateCard(type, view) {
   const card = h("div", { class: "card card-pad", style: "margin-bottom:14px" });
   card.append(h("div", { class: "floor-head", style: "margin:0 0 10px" },
     h("h3", { style: "font-size:16px" }, t("tpl.cleaning_x", { x: t("clean." + type.key).toLowerCase() })), h("span", {}, t("tpl.tasks", { n: items.length }))));
+
+  // opcional / obligatòria
+  const required = isChecklistRequired(type.key);
+  const seg = h("div", { class: "seg", style: "margin-bottom:8px" });
+  seg.append(
+    h("button", { class: !required ? "active" : "", onClick: async () => { await setChecklistRequired(type.key, false); renderSetup(view); } }, t("req.optional")),
+    h("button", { class: required ? "active" : "", onClick: async () => { await setChecklistRequired(type.key, true); renderSetup(view); } }, t("req.required"))
+  );
+  card.append(seg);
+  card.append(h("p", { class: "muted", style: "font-size:11.5px;margin:0 0 12px" }, t("req.hint")));
+
   const list = h("div", { class: "check-list" });
   const persist = () => saveChecklistTemplate(type.key, items.slice());
   items.forEach((label, idx) => list.append(h("div", { class: "check", style: "background:var(--surface-2)" },
