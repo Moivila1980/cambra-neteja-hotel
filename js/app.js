@@ -10,6 +10,7 @@ import { renderIncidents } from "./views/incidents.js";
 import { renderReport } from "./views/report.js";
 import { renderSetup } from "./views/setup.js";
 import { renderLogin } from "./views/login.js";
+import { renderAdmin } from "./views/admin.js";
 
 /* Rutes permeses segons rol (les cambreres no veuen Informe ni Configura). */
 const STAFF_ROUTES = ["board", "incidents"];
@@ -19,6 +20,7 @@ const ROUTES = {
   incidents: renderIncidents,
   report: renderReport,
   setup: renderSetup,
+  admin: renderAdmin,
 };
 
 let current = "board";
